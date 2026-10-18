@@ -1,0 +1,3 @@
+RestaurantConfig = {
+	Restaurants = {}
+}

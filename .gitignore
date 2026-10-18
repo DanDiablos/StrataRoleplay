@@ -1,0 +1,47 @@
+# ── FXServer ──────────────────────────────────────────────────────────────────
+artifacts/
+txData/
+server/cache/
+server/created_doors_data.txt
+/server/db
+
+# ── Large Assets (download separately) ────────────────────────────────────────
+server/resources/\[assets\]/
+
+# ── Secrets (copy secrets.example.cfg → secrets.cfg and fill in values) ───────
+server/config/secrets.cfg
+server/server.prod.cfg
+
+# ── NUI Build Output (run npm run build after cloning) ────────────────────────
+server/resources/\[strata\]/*/ui/dist/
+server/resources/\[strata\]/*/web/build/
+server/resources/\[ox\]/*/web/build/
+server/resources/\[standalone\]/*/game/nui/dist/
+
+# ── Dependencies ──────────────────────────────────────────────────────────────
+node_modules/
+package-lock.json
+bun.lock
+yarn.lock
+.yarn/
+
+# ── Editor ────────────────────────────────────────────────────────────────────
+.vscode/
+imgui.ini
+
+# ── Claude Code ───────────────────────────────────────────────────────────────
+.claude/
+CLAUDE.md
+
+# ── OS Junk ───────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Logs & Misc ───────────────────────────────────────────────────────────────
+*.log
+*.bkp
+.replxx_history
+alpine/
+server/server.prod.cfg
+/server/resources/\[assets_maps\]

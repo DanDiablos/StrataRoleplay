@@ -1,0 +1,385 @@
+local _lastDamage   = { hash = 0, source = 0, melee = false }
+local damageHistory = {}
+local wasDamaged    = false
+local _respawning   = false
+
+---@type number | nil
+local _fallStartZ   = nil
+local _lastFallDist = 0.0
+local FATAL_FALL_HEIGHT = 40.0
+
+local hasBled = false
+AddEventHandler("Damage:Client:Triggers:EntityDamaged", function(victim, attacker, pWeapon, isMelee)
+	if victim ~= PlayerPedId() then return end
+	if LocalPlayer.state.isAdmin and LocalPlayer.state.isGodmode then return end
+
+	local _, bone = GetPedLastDamageBone(victim)
+
+	table.insert(damageHistory, {
+		hash   = pWeapon,
+		source = attacker,
+		melee  = isMelee,
+		bone   = bone,
+	})
+
+	wasDamaged = true
+
+	if not hasBled and GetPedArmour(PlayerPedId()) <= 0 then
+		hasBled = true
+		TriggerEvent('Evidence:Client:BleedOnFloor')
+		SetTimeout(1000 * 30, function()
+			hasBled = false
+		end)
+	end
+
+	-- Execute while downed
+	if LocalPlayer.state?.isDead and LocalPlayer.state.deadData?.isMinor and Config.Weapons[pWeapon]?.violent then
+		LocalPlayer.state:set("isDead", true, true)
+		local deadTime    = GetCloudTimeAsInt()
+		local releaseTime = deadTime + GetReleaseTime(false)
+		LocalPlayer.state:set("deadData",     { isMinor = false }, true)
+		LocalPlayer.state:set("isDeadTime",   deadTime,           true)
+		LocalPlayer.state:set("releaseTime",  releaseTime,        true)
+		exports['st_ui']:DeathTextsHide()
+		exports['st_ui']:DeathTextsShow("death", deadTime, releaseTime)
+		TriggerEvent("Ped:Client:Died")
+		TriggerServerEvent("Ped:Server:Died")
+		DoDeadEvent()
+	end
+end)
+
+AddEventHandler("Keybinds:Client:KeyUp:secondary_action", function()
+	if not (LocalPlayer.state.isDead and not LocalPlayer.state.isHospitalized) then return end
+	if GetCloudTimeAsInt() <= LocalPlayer.state.releaseTime then return end
+	if _respawning then return end
+
+	_respawning = true
+	TriggerServerEvent("Escort:Server:ForceStop")
+	exports['st_ui']:DeathTextsRelease()
+
+	if not LocalPlayer.state.deadData?.isMinor then
+		exports['st_ui']:Progress({
+			name    = "hospital_action",
+			duration = 10000,
+			label   = "Respawning",
+			useWhileDead    = true,
+			canCancel       = true,
+			ignoreModifier  = true,
+			controlDisables = {
+				disableMovement    = true,
+				disableCarMovement = true,
+				disableMouse       = false,
+				disableCombat      = true,
+			},
+			animation = false,
+		}, function(status)
+			if not status then
+				exports["strata"]:ServerCallback("Hospital:Respawn", {}, function(bedId)
+					if bedId ~= nil then
+						TriggerServerEvent("Escort:Server:ForceStop")
+						LocalPlayer.state:set("isHospitalized", true, true)
+						Wait(250)
+						exports['st_injury']:HospitalSendToBed(Config.Beds[bedId], false, bedId)
+					else
+						exports["st_ui"]:Notification("error", "Unable To Respawn Yet, Please Wait")
+					end
+				end)
+			else
+				exports['st_ui']:DeathTextsShow(
+					LocalPlayer.state.deadData?.isMinor and "knockout" or "death",
+					LocalPlayer.state.isDeadTime,
+					LocalPlayer.state.releaseTime
+				)
+			end
+			_respawning = false
+		end)
+	else
+		exports['st_injury']:Revive()
+		_respawning = false
+	end
+end)
+
+RegisterNetEvent("Damage:Client:Ticks:Heal", function()
+	exports['st_ui']:ApplyUniqueBuff("heal_ticks", #LocalPlayer.state.healTicks * 10, false, {
+		customMax = #LocalPlayer.state.healTicks * 10,
+	})
+end)
+
+RegisterNetEvent("Damage:Client:Ticks:Armor", function()
+	exports['st_ui']:ApplyUniqueBuff("armor_ticks", #LocalPlayer.state.armorTicks * 10, false, {
+		customMax = #LocalPlayer.state.armorTicks * 10,
+	})
+end)
+
+function StartThreads()
+	-- Sync bone damage history to server every 60s
+	CreateThread(function()
+		while LocalPlayer.state.loggedIn do
+			if wasDamaged then
+				TriggerServerEvent("Damage:Server:BoneDamage", damageHistory)
+				damageHistory = {}
+				wasDamaged    = false
+			end
+			Wait(60000)
+		end
+	end)
+
+	LocalPlayer.state.regenRate = 0.0
+
+	-- Disable stealth movement
+	CreateThread(function()
+		while LocalPlayer.state.loggedIn do
+			if GetPedStealthMovement(PlayerPedId()) then
+				SetPedStealthMovement(PlayerPedId(), 0, 0)
+			end
+			Wait(20)
+		end
+	end)
+
+	-- Persist HP/armor to server every 60s
+	local lastHp    = 0
+	local lastArmor = 0
+	CreateThread(function()
+		local sid = LocalPlayer.state.Character:GetData("SID")
+		while LocalPlayer.state.loggedIn do
+			Wait(60000)
+			if LocalPlayer.state.Character ~= nil and sid == LocalPlayer.state.Character:GetData("SID") then
+				local hp    = GetEntityHealth(LocalPlayer.state.ped)
+				local armor = GetPedArmour(LocalPlayer.state.ped)
+				if hp ~= lastHp or armor ~= lastArmor then
+					lastHp    = hp
+					lastArmor = armor
+					TriggerServerEvent("Damage:Server:StoreHealth", hp, armor)
+				end
+			end
+		end
+	end)
+
+	-- Low health screen flash
+	CreateThread(function()
+		while LocalPlayer.state.loggedIn do
+			if not LocalPlayer.state.inCreator then
+				Wait(10000)
+				if Config.EnableScreenFlash then
+					local max  = GetEntityMaxHealth(LocalPlayer.state.ped) - 100
+					local myhp = GetEntityHealth(LocalPlayer.state.ped) - 100
+					if myhp <= math.ceil(max * 0.10) then
+						SetFlash(0, 0, 500, math.random(10) * 1000, 500)
+					elseif myhp <= math.ceil(max * 0.25) then
+						SetFlash(0, 0, 500, math.random(5) * 1000, 500)
+					elseif myhp <= math.ceil(max * 0.50) then
+						SetFlash(0, 0, 500, math.random(2) * 1000, 500)
+					else
+						SetFlash(0, 0, 1, 0, 1)
+					end
+				end
+			else
+				Wait(30000)
+			end
+		end
+	end)
+
+	-- Fall height tracker
+	CreateThread(function()
+		while LocalPlayer.state.loggedIn do
+			local ped = PlayerPedId()
+			if IsPedFalling(ped) then
+				if _fallStartZ == nil then
+					_fallStartZ = GetEntityCoords(ped).z
+				end
+				Wait(50)
+			else
+				if _fallStartZ ~= nil then
+					local landZ = GetEntityCoords(ped).z
+					_lastFallDist = _fallStartZ - landZ
+					_fallStartZ = nil
+				end
+				Wait(200)
+			end
+		end
+		_fallStartZ = nil
+		_lastFallDist = 0.0
+	end)
+
+	-- Death detection
+	local doingthedead = false
+	CreateThread(function()
+		while LocalPlayer.state.loggedIn do
+			if not LocalPlayer.state.isDead then
+				local player = PlayerPedId()
+				if not (LocalPlayer.state.isAdmin and LocalPlayer.state.isGodmode) and IsEntityDead(player) and not doingthedead then
+					doingthedead = true
+
+					local deathHash   = GetPedCauseOfDeath(player)
+					if not deathHash or deathHash == 0 then deathHash = _lastDamage.hash end
+					local deathSource = GetPedSourceOfDeath(player)
+					if not deathSource or deathSource == 0 then deathSource = _lastDamage.source end
+
+					local isMinor = wasMinorDeath(deathHash)
+
+					-- High falls are always fatal
+					local isFallDeath = deathHash == `WEAPON_FALL` or deathHash == `WEAPON_FALLING`
+					if isFallDeath and _lastFallDist >= FATAL_FALL_HEIGHT then
+						isMinor = false
+					end
+					_lastFallDist = 0.0
+
+					if not LocalPlayer.state.gameMode then
+						if isMinor and exports['st_injury']:GetReductions() < 6 then
+							exports['st_injury']:ReductionsIncrease(1)
+						else
+							isMinor = false
+						end
+					end
+
+					LocalPlayer.state:set("isDead", true, true)
+
+					local deadTime    = GetCloudTimeAsInt()
+					local releaseTime = deadTime + GetReleaseTime(isMinor)
+
+					LocalPlayer.state:set("deadData",    { isMinor = isMinor }, true)
+					LocalPlayer.state:set("isDeadTime",  deadTime,             true)
+					LocalPlayer.state:set("releaseTime", releaseTime,          true)
+					exports['st_ui']:DeathTextsShow(isMinor and "knockout" or "death", deadTime, releaseTime)
+
+					while not LocalPlayer.state.isDead do
+						Wait(1)
+					end
+
+					TriggerEvent("Ped:Client:Died")
+					TriggerServerEvent("Ped:Server:Died")
+
+					if (exports['st_jail']:IsJailed() or not nearPlayer(100.0)) and not Config.Weapons[deathHash]?.minor then
+						TriggerServerEvent("EmergencyAlerts:Server:DoPredefined", "injuredPerson")
+					end
+
+					exports['st_ui']:Dead(true)
+					DoDeadEvent()
+					doingthedead = false
+				end
+			end
+			Wait(100)
+		end
+	end)
+
+	-- Heal ticks
+	CreateThread(function()
+		while LocalPlayer.state.loggedIn do
+			if LocalPlayer.state.healTicks ~= nil then
+				local chp = GetEntityHealth(LocalPlayer.state.ped)
+				local max = GetEntityMaxHealth(LocalPlayer.state.ped)
+
+				if chp >= max then
+					exports['st_ui']:RemoveBuffType("heal_ticks")
+					LocalPlayer.state:set("healTicks", nil, true)
+				else
+					local heal = LocalPlayer.state.healTicks[1] or 0
+					if chp + heal > max then heal = max - chp end
+
+					Strata.Log.Trace("Damage",
+						string.format("Heal Tick: %s (Original: %s)", heal, LocalPlayer.state.healTicks[1]))
+					SetEntityHealth(LocalPlayer.state.ped, chp + heal)
+
+					if chp + heal >= max then
+						exports['st_ui']:RemoveBuffType("heal_ticks")
+					end
+
+					local t = LocalPlayer.state.healTicks
+					table.remove(t, 1)
+					if #t > 0 then
+						LocalPlayer.state:set("healTicks", t, true)
+					else
+						exports['st_ui']:RemoveBuffType("heal_ticks")
+						LocalPlayer.state:set("healTicks", nil, true)
+					end
+				end
+				Wait(10000)
+			else
+				Wait(2000)
+			end
+		end
+	end)
+
+	-- Armor ticks
+	CreateThread(function()
+		while LocalPlayer.state.loggedIn do
+			if LocalPlayer.state.armorTicks ~= nil then
+				local car = GetPedArmour(LocalPlayer.state.ped)
+				local max = GetPlayerMaxArmour(LocalPlayer.state.PlayerID)
+
+				if car >= max then
+					exports['st_ui']:RemoveBuffType("armor_ticks")
+					LocalPlayer.state:set("armorTicks", nil, true)
+				else
+					local gen = LocalPlayer.state.armorTicks[1] or 0
+					if car + gen > max then gen = max - car end
+
+					Strata.Log.Trace("Damage",
+						string.format("Armor Tick: %s (Original: %s)", gen, LocalPlayer.state.armorTicks[1]))
+					SetPedArmour(LocalPlayer.state.ped, car + gen)
+
+					if car + gen >= max then
+						exports['st_ui']:RemoveBuffType("armor_ticks")
+					end
+
+					local t = LocalPlayer.state.armorTicks
+					table.remove(t, 1)
+					if #t > 0 then
+						LocalPlayer.state:set("armorTicks", t, true)
+					else
+						exports['st_ui']:RemoveBuffType("armor_ticks")
+						LocalPlayer.state:set("armorTicks", nil, true)
+					end
+				end
+				Wait(10000)
+			else
+				Wait(2000)
+			end
+		end
+	end)
+
+	-- Limping ragdoll chance
+	CreateThread(function()
+		while LocalPlayer.state.loggedIn do
+			if LocalPlayer.state.isLimping then
+				local luck = math.random(100)
+				if (IsPedJumping(LocalPlayer.state.ped) and luck <= 85)
+					or (IsPedSprinting(LocalPlayer.state.ped) and luck <= 4)
+				then
+					SetPedToRagdoll(LocalPlayer.state.ped, 1500, 2000, 3, true, true, false)
+				end
+				Wait(100)
+			else
+				Wait(2500)
+			end
+		end
+	end)
+
+	-- Painkiller / drug countdown + limp
+	CreateThread(function()
+		while LocalPlayer.state.loggedIn do
+			if LocalPlayer.state.onPainKillers ~= nil and LocalPlayer.state.onPainKillers > 0 then
+				LocalPlayer.state.onPainKillers = LocalPlayer.state.onPainKillers - 1
+			elseif LocalPlayer.state.wasOnPainKillers then
+				LocalPlayer.state.wasOnPainKillers = false
+			end
+
+			if LocalPlayer.state.onDrugs ~= nil and LocalPlayer.state.onDrugs > 0 then
+				LocalPlayer.state.onDrugs = LocalPlayer.state.onDrugs - 1
+			elseif LocalPlayer.state.wasOnDrugs then
+				LocalPlayer.state.wasOnDrugs = false
+			end
+
+			ApplyLimp(LocalPlayer.state.ped)
+			Wait(200)
+		end
+	end)
+
+	-- Regen rate
+	CreateThread(function()
+		while LocalPlayer.state.loggedIn do
+			SetPlayerHealthRechargeMultiplier(LocalPlayer.state.PlayerID, LocalPlayer.state.regenRate)
+			Wait(250)
+		end
+	end)
+end

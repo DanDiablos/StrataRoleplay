@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fira+Mono:wght@400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100vw;
+    height: 100vh;
+    background: transparent;
+    overflow: hidden;
+    pointer-events: none;
+    user-select: none;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  #root {
+    display: none;
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    width: 320px;
+  }
+
+  #root.visible {
+    display: block;
+  }
+
+  /* ── top bar ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(255, 92, 58, 0.9);
+    padding: 6px 12px;
+    border-radius: 6px 6px 0 0;
+  }
+
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .topbar-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.6);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .topbar-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #fff;
+  }
+
+  .topbar-badges {
+    display: flex;
+    gap: 4px;
+  }
+
+  .tbadge {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: rgba(0,0,0,0.25);
+    color: rgba(255,255,255,0.4);
+    transition: all 0.15s ease;
+  }
+
+  .tbadge.on {
+    background: rgba(255,255,255,0.25);
+    color: #fff;
+  }
+
+  /* ── body ── */
+  .body {
+    background: rgba(10, 10, 10, 0.94);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    padding: 10px 0 6px;
+  }
+
+  /* ── section ── */
+  .section-label {
+    font-size: 8.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255, 92, 58, 0.7);
+    padding: 0 12px;
+    margin-bottom: 4px;
+    margin-top: 8px;
+  }
+
+  .section-label:first-child { margin-top: 0; }
+
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 3px 12px;
+    gap: 12px;
+  }
+
+  .lbl {
+    font-size: 10px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.3);
+    flex-shrink: 0;
+    min-width: 60px;
+  }
+
+  .val {
+    font-family: 'Fira Mono', monospace;
+    font-size: 10px;
+    color: rgba(255,255,255,0.8);
+    text-align: right;
+    flex: 1;
+  }
+
+  .val.accent { color: #FF5C3A; }
+
+  .sep {
+    height: 1px;
+    background: rgba(255,255,255,0.05);
+    margin: 6px 12px;
+  }
+
+  /* ── coords big display ── */
+  .coords-block {
+    margin: 2px 12px 8px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 5px;
+    padding: 8px 10px;
+  }
+
+  .coords-block .coords-label {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.2);
+    margin-bottom: 4px;
+  }
+
+  .coords-value {
+    font-family: 'Fira Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.9);
+    letter-spacing: 0.02em;
+  }
+
+  .coords-heading {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+  }
+
+  .coords-heading .ch-label {
+    font-size: 8px;
+    color: rgba(255,255,255,0.2);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .coords-heading .ch-val {
+    font-family: 'Fira Mono', monospace;
+    font-size: 10px;
+    color: rgba(255, 92, 58, 0.9);
+  }
+
+  /* ── footer hint ── */
+  .footer {
+    margin: 6px 12px 0;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    display: flex;
+    gap: 12px;
+  }
+
+  .hint {
+    font-size: 8.5px;
+    color: rgba(255,255,255,0.2);
+  }
+
+  .hint kbd {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 2px;
+    padding: 1px 4px;
+    font-size: 8px;
+    font-family: 'Fira Mono', monospace;
+    color: rgba(255,255,255,0.4);
+    margin-right: 3px;
+  }
+</style>
+</head>
+<body>
+
+<div id="root">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-dot"></div>
+      <span class="topbar-title">st_debug</span>
+    </div>
+    <div class="topbar-badges">
+      <span class="tbadge" id="badge-freeze">FREEZE</span>
+      <span class="tbadge" id="badge-grav">LOW GRAV</span>
+    </div>
+  </div>
+
+  <div class="body">
+
+    <!-- coords block -->
+    <div class="coords-block">
+      <div class="coords-label">position</div>
+      <div class="coords-value" id="v-coords">0.000, 0.000, 0.000</div>
+      <div class="coords-heading">
+        <span class="ch-label">heading</span>
+        <span class="ch-val" id="v-heading">0.00</span>
+      </div>
+    </div>
+
+    <!-- player -->
+    <div class="section-label">player</div>
+    <div class="row"><span class="lbl">health</span><span class="val" id="v-health">—</span></div>
+    <div class="row"><span class="lbl">speed</span><span class="val" id="v-speed">—</span></div>
+    <div class="row"><span class="lbl">hag</span><span class="val" id="v-hag">—</span></div>
+    <div class="row"><span class="lbl">model</span><span class="val" id="v-model">—</span></div>
+
+    <div class="sep"></div>
+
+    <!-- world -->
+    <div class="section-label">world</div>
+    <div class="row"><span class="lbl">street</span><span class="val" id="v-street">—</span></div>
+    <div class="row"><span class="lbl">interior</span><span class="val" id="v-interior">—</span></div>
+
+    <div class="sep"></div>
+
+    <!-- camera -->
+    <div class="section-label">camera</div>
+    <div class="row"><span class="lbl">position</span><span class="val" id="v-cam">—</span></div>
+    <div class="row"><span class="lbl">frame</span><span class="val" id="v-frame">—</span></div>
+
+    <!-- footer -->
+    <div class="footer">
+      <span class="hint"><kbd>E</kbd>freeze npcs</span>
+      <span class="hint"><kbd>G</kbd>low gravity</span>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const root        = document.getElementById('root');
+  const badgeFreeze = document.getElementById('badge-freeze');
+  const badgeGrav   = document.getElementById('badge-grav');
+  const fields      = {};
+
+  ['coords','heading','speed','health','hag','street','interior','model','cam','frame'].forEach(k => {
+    fields[k] = document.getElementById('v-' + k);
+  });
+
+  window.addEventListener('message', e => {
+    const d = e.data;
+    if (d.type === 'hide') {
+      root.classList.remove('visible');
+    } else if (d.type === 'update') {
+      root.classList.add('visible');
+      for (const [k, v] of Object.entries(d.data)) {
+        if (fields[k]) fields[k].textContent = v;
+      }
+      badgeFreeze.classList.toggle('on', !!d.freeze);
+      badgeGrav.classList.toggle('on',   !!d.grav);
+    }
+  });
+</script>
+</body>
+</html>

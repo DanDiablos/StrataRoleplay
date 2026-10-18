@@ -1,0 +1,2 @@
+-- Radio item use callbacks are handled by st_voip/server/server.lua
+-- This file is kept for reference but the actual registration happens in st_voip

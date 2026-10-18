@@ -1,0 +1,40 @@
+@import './assets/fonts.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  outline: none !important;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: transparent;
+  font-family: 'DM Sans', sans-serif;
+  color: white;
+}
+
+/* Dev-only: give the viewport a visible backdrop so minigames stand out in the browser.
+   Production NUI mounts over the game and must stay transparent — this class is only applied in dev. */
+body.dev-bg {
+  background:
+    radial-gradient(circle at 20% 20%, #2a1a18 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, #1a1f2a 0%, transparent 50%),
+    #0a0a0a;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+.animate-fade-in  { animation: fade-in  0.2s ease-out both; }
+.animate-fade-out { animation: fade-out 0.2s ease-in  both; }

@@ -1,0 +1,59 @@
+@import './assets/fonts.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  outline: none !important;
+}
+
+html, body, #root {
+  margin: 0; padding: 0;
+  width: 100vw; height: 100vh;
+  overflow: hidden;
+  background: transparent;
+  font-family: 'DM Sans', sans-serif;
+  color: white;
+}
+
+@keyframes ls-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.ls-enter       { animation: ls-enter 0.4s  cubic-bezier(0.22,1,0.36,1) both; }
+.ls-enter-slow  { animation: ls-enter 0.55s cubic-bezier(0.22,1,0.36,1) both; }
+
+@keyframes ken-burns {
+  0%   { transform: scale(1.1) translate(-0.8%, -0.4%); }
+  50%  { transform: scale(1.1) translate(0.8%,  0.4%); }
+  100% { transform: scale(1.1) translate(-0.8%, -0.4%); }
+}
+.bg-ken-burns { animation: ken-burns 90s linear infinite; will-change: transform; }
+
+@keyframes haze-drift {
+  0%   { transform: translate(-8%, -4%) scale(1.2); opacity: 0.55; }
+  33%  { transform: translate(6%,  3%)  scale(1.4); opacity: 0.8;  }
+  66%  { transform: translate(-4%, 6%)  scale(1.25);opacity: 0.65; }
+  100% { transform: translate(-8%, -4%) scale(1.2); opacity: 0.55; }
+}
+.bg-haze { animation: haze-drift 38s ease-in-out infinite; will-change: transform, opacity; mix-blend-mode: screen; }
+
+@keyframes vignette-breath {
+  0%, 100% { opacity: 0.9; }
+  50%      { opacity: 0.65; }
+}
+.bg-vignette { animation: vignette-breath 14s ease-in-out infinite; }
+
+@keyframes light-sweep {
+  0%   { transform: translateX(-30%) skewX(-18deg); opacity: 0; }
+  45%  { opacity: 0.08; }
+  100% { transform: translateX(130%) skewX(-18deg); opacity: 0; }
+}
+.bg-sweep { animation: light-sweep 22s ease-in-out infinite; will-change: transform, opacity; }
+
+@keyframes music-bar {
+  0%, 100% { transform: scaleY(0.3); }
+  50%      { transform: scaleY(1);   }
+}

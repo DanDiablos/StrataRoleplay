@@ -1,0 +1,8 @@
+AddEventHandler("Phone:Server:RegisterCallbacks", function()
+	exports["strata"]:RegisterServerCallback("Phone:Media:GetMedia", function(source, data, cb)
+		cb(exports['st_phone']:PhotosFetch(source))
+	end)
+	exports["strata"]:RegisterServerCallback("Phone:Media:DeleteMedia", function(source, data, cb)
+		cb(exports['st_phone']:PhotosDelete(source, data.id))
+	end)
+end)

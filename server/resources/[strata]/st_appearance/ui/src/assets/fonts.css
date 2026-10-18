@@ -1,0 +1,30 @@
+@font-face {
+  font-family: 'Barlow';
+  font-weight: 700;
+  font-style: normal;
+  src: url('./fonts/Barlow-Bold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Barlow';
+  font-weight: 900;
+  font-style: normal;
+  src: url('./fonts/Barlow-Black.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'DM Sans';
+  font-weight: 400;
+  font-style: normal;
+  src: url('./fonts/DMSans-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'DM Sans';
+  font-weight: 500;
+  font-style: normal;
+  src: url('./fonts/DMSans-Medium.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Fira Mono';
+  font-weight: 400;
+  font-style: normal;
+  src: url('./fonts/FiraMono-Regular.woff2') format('woff2');
+}

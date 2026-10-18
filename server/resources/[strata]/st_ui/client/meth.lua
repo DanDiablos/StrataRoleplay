@@ -1,0 +1,12 @@
+RegisterNUICallback("Meth:Start", function(data, cb)
+	exports['st_sound']:UISoundsPlayFrontEnd(-1, "SELECT", "HUD_FRONTEND_DEFAULT_SOUNDSET")
+	TriggerEvent("Drugs:Client:Meth:ConfirmCook", data)
+	exports['st_ui']:MethClose()
+	cb("ok")
+end)
+
+RegisterNUICallback("Meth:Cancel", function(data, cb)
+	exports['st_sound']:UISoundsPlayFrontEnd(-1, "BACK", "HUD_FRONTEND_DEFAULT_SOUNDSET")
+	exports['st_ui']:MethClose()
+	cb("ok")
+end)
